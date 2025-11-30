@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import AVFoundation
+import UIKit
 
 struct LaunchScreenView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -13,17 +15,15 @@ struct LaunchScreenView: View {
     @State private var pulseAnimation = false
     @State private var fadeOut = false
     @State private var showTagline = false
+    @State private var audioPlayer: AVAudioPlayer?
+    @AppStorage("muteLaunchSound") private var muteLaunchSound = false
     
     var body: some View {
         ZStack {
             // Background color adapting to theme
-            if colorScheme == .dark {
-                Color(red: 0.08, green: 0.09, blue: 0.12)
-                    .ignoresSafeArea()
-            } else {
-                Color(red: 0xef/255, green: 0xe8/255, blue: 0xfd/255)
-                    .ignoresSafeArea()
-            }
+            // Background color (fixed to Light mode style)
+            Color(red: 0xef/255, green: 0xe8/255, blue: 0xfd/255)
+                .ignoresSafeArea()
             
             VStack(spacing: 20) {
                 // App Icon with animations
@@ -52,7 +52,8 @@ struct LaunchScreenView: View {
                     .opacity(isAnimating ? 1.0 : 0.0)
                 
                 // Tagline with falling letter animation
-                AnimatedTaglineView(colorScheme: colorScheme, showTagline: showTagline)
+                // Tagline with falling letter animation
+                AnimatedTaglineView(colorScheme: .light, showTagline: showTagline)
             }
             .opacity(fadeOut ? 0.0 : 1.0)
         }
@@ -60,6 +61,11 @@ struct LaunchScreenView: View {
             // Initial scale and fade in
             withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                 isAnimating = true
+            }
+            
+            // Play sound with a slight delay to avoid blocking initial render
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                playLaunchSound()
             }
             
             // Show tagline with delay
@@ -146,6 +152,22 @@ struct LaunchScreenView: View {
                 startPoint: .leading,
                 endPoint: .trailing
             )
+        }
+    }
+    
+    private func playLaunchSound() {
+        guard !muteLaunchSound else { return }
+        
+        if let soundAsset = NSDataAsset(name: "MixDoctor_sound") {
+            do {
+                audioPlayer = try AVAudioPlayer(data: soundAsset.data)
+                audioPlayer?.volume = 0.5
+                audioPlayer?.play()
+            } catch {
+                print("Error playing launch sound: \(error.localizedDescription)")
+            }
+        } else {
+            print("Could not find sound asset: MixDoctor_sound")
         }
     }
     
